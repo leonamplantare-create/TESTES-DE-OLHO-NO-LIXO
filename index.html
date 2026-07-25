@@ -150,7 +150,7 @@ function camadaAgentes(rows) {
             +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
             +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
             +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
-            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)+refInfo
+            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
             +'</div></div></div>';
         L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))}).bindPopup(popup,{maxWidth:260}).addTo(layer);
     });
