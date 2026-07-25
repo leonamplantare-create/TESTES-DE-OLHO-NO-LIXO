@@ -57,8 +57,8 @@ const SHEET_ID   = '1c7rQoSxD5apQhLZwoJ1penV76GVH1gkdvjl16OrsVEU';
 const ABA_ALUNOS = 'Coordenadas';
 const ABA_AGENTES= 'Agentes';
 
-// Paleta grupos
-const PALETA = ['#e53e3e','#3182ce','#38a169','#d69e2e','#805ad5','#dd6b20','#319795','#e91e8c'];
+// Alunos sempre vermelho, agentes têm 3 cores
+const COR_ALUNO = '#e53e3e';
 let _corGrupo = {};
 
 // ── Mapa ─────────────────────────────────────────────────────────
@@ -105,17 +105,19 @@ async function lerAba(aba) {
 function camadaAlunos(rows) {
     const layer = L.layerGroup();
     const grupos = [...new Set(rows.map(r=>r.grupo))].sort();
-    grupos.forEach((g,i)=>{ _corGrupo[g]=PALETA[i%PALETA.length]; });
+    grupos.forEach(g=>{ _corGrupo[g]=COR_ALUNO; });
     rows.forEach(r=>{
         const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
         if(isNaN(lat)||isNaN(lon)) return;
-        const cor = _corGrupo[r.grupo]||'#3388ff';
+        const cor = COR_ALUNO;
         const tipo= r.tipo_residuo||'lixo';
         const fotoHtml = r.foto_url
-            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:160px;object-fit:cover;border-radius:4px;margin-bottom:8px;">' : '';
-        const popup = '<div style="min-width:180px;">'
-            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;">&#128205; Grupo '+r.grupo+'</div>'
-            +'<div style="padding:8px 12px;">'+fotoHtml
+            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;">'
+            : '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
+        const popup = '<div style="min-width:200px;">'
+            + fotoHtml
+            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128205; Grupo '+r.grupo+'</div>'
+            +'<div style="padding:8px 12px;">'
             +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
             +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
             +'<b>Tipo:</b> '+({'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'}[tipo]||tipo)+'<br>'
@@ -130,8 +132,8 @@ function camadaAlunos(rows) {
 // ── Camada agentes ───────────────────────────────────────────────
 function camadaAgentes(rows) {
     const layer = L.layerGroup();
-    const _cores = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#ed8936'};
-    const _labels= {'novo_ponto':'&#128308; Ponto novo','recorrencia':'&#128993; Recorr\u00eancia','limpo':'&#128994; Local limpo','analise_operador':'&#128992; Aguarda an\u00e1lise'};
+    const _cores = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#d69e2e'};
+    const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorr\u00eancia','limpo':'Local limpo','analise_operador':'Recorr\u00eancia'};
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
     rows.forEach(r=>{
         const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
@@ -139,13 +141,12 @@ function camadaAgentes(rows) {
         const st  = r.status||'novo_ponto';
         const cor = _cores[st]||'#718096';
         const fotoHtml = r.foto_url
-            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:160px;object-fit:cover;border-radius:4px;margin-bottom:8px;">' 
-            : '<div style="text-align:center;padding:10px;color:#718096;font-size:11px;">Sem foto</div>';
-        const refInfo = (r.ref_grupo&&r.ref_foto)
-            ? '<br><b>Ref:</b> G'+r.ref_grupo+'/'+r.ref_foto+' ('+r.ref_distancia+'m)' : '';
+            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;">'
+            : '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
         const popup = '<div style="min-width:200px;">'
-            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;">&#128119; Agente \u2014 '+(_labels[st]||st)+'</div>'
-            +'<div style="padding:8px 12px;">'+fotoHtml
+            + fotoHtml
+            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal \u2014 '+(_labels[st]||st)+'</div>'
+            +'<div style="padding:8px 12px;">'
             +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
             +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
             +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
@@ -174,16 +175,16 @@ function atualizarLegenda(){
     const el=document.getElementById('leg');
     let h='';
     if(_modo!=='agentes'){
-        h+='<b>Grupos</b>';
-        Object.entries(_corGrupo).forEach(([g,c])=>{ h+='<div><span style="color:'+c+';">&#9679;</span> Grupo '+g+'</div>'; });
+        h+='<b>Alunos</b>'
+            +'<div><span style="color:#e53e3e;">&#9679;</span> Grupo 01</div>'
+            +'<div><span style="color:#e53e3e;">&#9679;</span> Grupo 02</div>';
         h+='<b>Tipo res&iacute;duo</b><div>&#128465; Lixo</div><div>&#127795; Poda</div><div>&#127795;&#128465; Lixo+poda</div>';
     }
     if(_modo!=='alunos'){
-        h+='<b>Agentes</b>'
-            +'<div><span style="color:#e53e3e;">&#9679;</span> Ponto novo</div>'
+        h+='<b>Fiscais</b>'
+            +'<div><span style="color:#e53e3e;">&#9679;</span> Ponto sem registro</div>'
             +'<div><span style="color:#d69e2e;">&#9679;</span> Recorr&ecirc;ncia</div>'
-            +'<div><span style="color:#38a169;">&#9679;</span> Limpo (&#10003;)</div>'
-            +'<div><span style="color:#ed8936;">&#9679;</span> An&aacute;lise (&#9888;)</div>';
+            +'<div><span style="color:#38a169;">&#9679;</span> Local limpo (&#10003;)</div>';
     }
     el.innerHTML=h;
 }
