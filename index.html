@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>De Olho no Lixo da Ilha — Mapa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f5f5f0;color:#2d3748;}
@@ -39,6 +39,11 @@ header p{font-size:0.72rem;opacity:.8;}
   <button class="btn-t on" id="btn-al"  onclick="setModo('alunos')">&#128100; Alunos</button>
   <button class="btn-t"    id="btn-ag"  onclick="setModo('agentes')">&#128119; Agentes</button>
   <button class="btn-t"    id="btn-amb" onclick="setModo('ambos')">&#127758; Ambos</button>
+  <div style="width:1px;background:#ddd;margin:0 4px;align-self:stretch;"></div>
+  <button class="btn-t on" id="filt-todos"     onclick="setFiltroTipo('todos')"">Todos</button>
+  <button class="btn-t"    id="filt-lixo"      onclick="setFiltroTipo('lixo')">&#128465; Lixo</button>
+  <button class="btn-t"    id="filt-poda"      onclick="setFiltroTipo('poda')">&#127795; Poda</button>
+  <button class="btn-t"    id="filt-lixo_poda" onclick="setFiltroTipo('lixo_poda')">&#127795;&#128465; Lixo+Poda</button>
   <div class="chips">
     <span class="chip" id="stat-al">0 pontos alunos</span>
     <span class="chip ag" id="stat-ag">0 pontos agentes</span>
@@ -62,12 +67,33 @@ const COR_ALUNO = '#e53e3e';
 let _corGrupo = {};
 
 // ── Mapa ─────────────────────────────────────────────────────────
-const map = L.map('map').setView([-7.748,-34.831],13);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+let map, _modo = 'alunos', _camAl = null, _camAg = null;
+let _filtroTipo = 'todos';
+let _dadosAl = [], _dadosAg = [];
 
-let _modo = 'alunos';
-let _camAl = null, _camAg = null;
+function setFiltroTipo(tipo) {
+    _filtroTipo = tipo;
+    ['todos','lixo','poda','lixo_poda'].forEach(t => {
+        document.getElementById('filt-'+t)?.classList.toggle('on', t === tipo);
+    });
+    _reaplicarCamadas();
+}
+
+function _filtrarPontos(lista) {
+    if (_filtroTipo === 'todos') return lista;
+    return lista.filter(p => (p.tipo_residuo || 'lixo') === _filtroTipo);
+}
+
+function _reaplicarCamadas() {
+    if (!map) return;
+    if (_camAl) map.removeLayer(_camAl);
+    if (_camAg) map.removeLayer(_camAg);
+    _camAl = camadaAlunos(_filtrarPontos(_dadosAl));
+    _camAg = camadaAgentes(_filtrarPontos(_dadosAg));
+    if (_modo !== 'agentes') _camAl.addTo(map);
+    if (_modo !== 'alunos')  _camAg.addTo(map);
+    atualizarLegenda();
+}
 
 // ── Ícones SVG (igual ao app) ────────────────────────────────────
 function pinHTML(cor, tipo) {
@@ -92,13 +118,33 @@ async function lerAba(aba) {
     const url = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(aba);
     const res = await fetch(url);
     const txt = await res.text();
-    const json = JSON.parse(txt.replace(/^[^\(]+\(/,'').replace(/\);\s*$/,''));
+    const json = JSON.parse(txt.replace(/^[^\(]+\(/,'').replace(/\);?\s*$/,''));
     const cols = json.table.cols.map(c=>c.label);
     return (json.table.rows||[]).map(row=>{
         const o={};
         cols.forEach((c,i)=>{ o[c]=row.c&&row.c[i]?row.c[i].v??'':''; });
+        // Coleta todas as colunas foto_url_N em ordem como array
+        const urls = [];
+        let n=1;
+        while (o['foto_url_'+n] !== undefined) {
+            if (o['foto_url_'+n]) urls.push(o['foto_url_'+n]);
+            n++;
+        }
+        // Compatibilidade com coluna antiga foto_url
+        if (!urls.length && o['foto_url']) urls.push(o['foto_url']);
+        o._foto_urls = urls;
         return o;
     });
+}
+
+// ── Carregar foto com fallback entre contas ───────────────────────
+function criarImgComFallback(urls, style) {
+    if (!urls || !urls.length) return '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
+    // Cria img que tenta a próxima URL se a atual falhar (bandwidth esgotado)
+    const id = 'img_' + Math.random().toString(36).slice(2,8);
+    const urlsJson = JSON.stringify(urls).replace(/"/g,'&quot;');
+    return `<img id="${id}" src="${urls[0]}" style="${style}" `
+        + `onerror="(function(el,urls,idx){if(idx<urls.length){el.src=urls[idx];el.onerror=function(){(arguments.callee)(el,urls,idx+1);};}else{el.outerHTML='<div style=&quot;background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;&quot;>Foto indispon&#237;vel</div>';}})(this,${urlsJson},1)">`;
 }
 
 // ── Camada alunos ────────────────────────────────────────────────
@@ -111,9 +157,7 @@ function camadaAlunos(rows) {
         if(isNaN(lat)||isNaN(lon)) return;
         const cor = COR_ALUNO;
         const tipo= r.tipo_residuo||'lixo';
-        const fotoHtml = r.foto_url
-            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;">'
-            : '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
+        const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;');
         const popup = '<div style="min-width:200px;">'
             + fotoHtml
             +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128205; Grupo '+r.grupo+'</div>'
@@ -140,17 +184,19 @@ function camadaAgentes(rows) {
         if(isNaN(lat)||isNaN(lon)) return;
         const st  = r.status||'novo_ponto';
         const cor = _cores[st]||'#718096';
-        const fotoHtml = r.foto_url
-            ? '<img src="'+r.foto_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;">'
-            : '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
+        const refInfo = r.ref_grupo
+            ? '<br><b>Ref:</b> G'+r.ref_grupo+'/'+r.ref_foto+' ('+r.ref_distancia+'m)'
+            : '';
+        const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;');
         const popup = '<div style="min-width:200px;">'
             + fotoHtml
             +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal \u2014 '+(_labels[st]||st)+'</div>'
             +'<div style="padding:8px 12px;">'
             +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
+            +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
             +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
             +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
-            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
+            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)+refInfo
             +'</div></div></div>';
         L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))}).bindPopup(popup,{maxWidth:260}).addTo(layer);
     });
@@ -161,7 +207,8 @@ function camadaAgentes(rows) {
 function setModo(modo){
     _modo=modo;
     ['alunos','agentes','ambos'].forEach(m=>{
-        document.getElementById('btn-'+m.replace('alunos','al').replace('agentes','ag').replace('ambos','amb')).classList.toggle('on',m===modo);
+        const id='btn-'+m.replace('alunos','al').replace('agentes','ag').replace('ambos','amb');
+        document.getElementById(id)?.classList.toggle('on',m===modo);
     });
     if(_camAl) map.removeLayer(_camAl);
     if(_camAg) map.removeLayer(_camAg);
@@ -191,6 +238,11 @@ function atualizarLegenda(){
 
 // ── Init ─────────────────────────────────────────────────────────
 async function init(){
+    // Inicializar mapa aqui garante que Leaflet já carregou
+    map = L.map('map').setView([-7.748,-34.831],13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+        attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+
     if(!SHEET_ID||SHEET_ID.includes('COLE_')){
         document.getElementById('load').innerHTML='<div style="font-size:2rem;">&#9888;</div>'
             +'<b>Configure o SHEET_ID no index.html</b>'
@@ -202,12 +254,11 @@ async function init(){
             lerAba(ABA_ALUNOS).catch(()=>[]),
             lerAba(ABA_AGENTES).catch(()=>[]),
         ]);
-        _camAl = camadaAlunos(rAl);
-        _camAg = camadaAgentes(rAg);
+        _dadosAl = rAl;
+        _dadosAg = rAg;
         document.getElementById('stat-al').textContent = rAl.length+' pontos alunos';
         document.getElementById('stat-ag').textContent = rAg.length+' pontos agentes';
-        _camAl.addTo(map);
-        atualizarLegenda();
+        _reaplicarCamadas();
         const todos = [...rAl,...rAg].filter(r=>!isNaN(parseFloat(r.latitude))).map(r=>[parseFloat(r.latitude),parseFloat(r.longitude)]);
         if(todos.length) map.fitBounds(L.latLngBounds(todos),{padding:[20,20]});
         document.getElementById('load').style.display='none';
@@ -215,7 +266,7 @@ async function init(){
         document.getElementById('load').innerHTML='<div style="font-size:2rem;">&#9888;</div><b>Erro ao carregar</b><p style="font-size:0.8rem;color:#718096;margin-top:6px;">'+e.message+'</p>';
     }
 }
-init();
+window.addEventListener('load', init);
 </script>
 </body>
 </html>
