@@ -34,35 +34,30 @@ header p{font-size:0.72rem;opacity:.8;}
     <p>Mapa interativo de fiscaliza&#231;&#227;o &#8212; Itamarac&#225;-PE</p>
   </div>
 </header>
-
 <div class="bar">
-  <button class="btn-t on" id="btn-al"  onclick="setModo('alunos')">&#128100; Alunos</button>
-  <button class="btn-t"    id="btn-ag"  onclick="setModo('agentes')">&#128119; Agentes</button>
-  <button class="btn-t"    id="btn-amb" onclick="setModo('ambos')">&#127758; Ambos</button>
+  <button class="btn-t on" id="btn-al" onclick="setModo('alunos')">&#128100; Alunos</button>
+  <button class="btn-t" id="btn-ag" onclick="setModo('agentes')">&#128119; Agentes</button>
+  <button class="btn-t" id="btn-amb" onclick="setModo('ambos')">&#127758; Ambos</button>
   <div style="width:1px;background:#ddd;margin:0 4px;align-self:stretch;"></div>
-  <button class="btn-t on" id="filt-todos"     onclick="setFiltroTipo('todos')">Todos</button>
-  <button class="btn-t"    id="filt-lixo"      onclick="setFiltroTipo('lixo')">&#128465; Lixo</button>
-  <button class="btn-t"    id="filt-poda"      onclick="setFiltroTipo('poda')">&#127795; Poda</button>
-  <button class="btn-t"    id="filt-lixo_poda" onclick="setFiltroTipo('lixo_poda')">&#127795;&#128465; Lixo+Poda</button>
+  <button class="btn-t on" id="filt-todos" onclick="setFiltroTipo('todos')">Todos</button>
+  <button class="btn-t" id="filt-lixo" onclick="setFiltroTipo('lixo')">&#128465; Lixo</button>
+  <button class="btn-t" id="filt-poda" onclick="setFiltroTipo('poda')">&#127795; Poda</button>
+  <button class="btn-t" id="filt-lixo_poda" onclick="setFiltroTipo('lixo_poda')">&#127795;&#128465; Lixo+Poda</button>
   <div class="chips">
     <span class="chip" id="stat-al">0 pontos alunos</span>
     <span class="chip ag" id="stat-ag">0 pontos agentes</span>
   </div>
 </div>
-
 <div style="position:relative;">
   <div id="map"></div>
   <div class="load" id="load"><div class="spin"></div><span>Carregando dados...</span></div>
   <div class="legenda" id="leg"></div>
 </div>
-
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────
-const SHEET_ID   = '1c7rQoSxD5apQhLZwoJ1penV76GVH1gkdvjl16OrsVEU';
+const SHEET_ID = '1c7rQoSxD5apQhLZwoJ1penV76GVH1gkdvjl16OrsVEU';
 const ABA_ALUNOS = 'Coordenadas';
-const ABA_AGENTES= 'Agentes';
-
-// Alunos sempre vermelho, agentes têm 3 cores
+const ABA_AGENTES = 'Agentes';
 const COR_ALUNO = '#e53e3e';
 let _corGrupo = {};
 
@@ -91,68 +86,72 @@ function _reaplicarCamadas() {
     _camAl = camadaAlunos(_filtrarPontos(_dadosAl));
     _camAg = camadaAgentes(_filtrarPontos(_dadosAg));
     if (_modo !== 'agentes') _camAl.addTo(map);
-    if (_modo !== 'alunos')  _camAg.addTo(map);
+    if (_modo !== 'alunos') _camAg.addTo(map);
     atualizarLegenda();
 }
 
-// ── Ícones SVG (igual ao app) ────────────────────────────────────
+// ── Ícones SVG ───────────────────────────────────────────────────
 function pinHTML(cor, tipo) {
     const m = {'lixo':'&#128465;','poda':'&#127795;','lixo_poda':'&#127795;&#128465;','limpo':'&#10003;','analise':'&#9888;'};
-    const fs = {'lixo':13,'poda':13,'lixo_poda':9,'limpo':15,'analise':12}[tipo]||13;
-    const dy = {'lixo':20,'poda':20,'lixo_poda':19,'limpo':21,'analise':20}[tipo]||20;
-    const s  = m[tipo]||m['lixo'];
+    const fs = {'lixo':13,'poda':13,'lixo_poda':9,'limpo':15,'analise':12}[tipo] || 13;
+    const s = m[tipo] || m['lixo'];
     return '<div style="width:36px;height:46px;">'
-        +'<svg width="36" height="46" viewBox="0 0 36 46" xmlns="http://www.w3.org/2000/svg">'
-        +'<ellipse cx="18" cy="44" rx="7" ry="2.5" fill="rgba(0,0,0,0.15)"/>'
-        +'<path d="M18 42C18 42 3 27 3 16C3 8.3 9.8 2 18 2C26.2 2 33 8.3 33 16C33 27 18 42 18 42Z" fill="'+cor+'" stroke="white" stroke-width="2.5"/>'
-        +'<circle cx="18" cy="15" r="11" fill="white" fill-opacity="0.95"/>'
-        +'<foreignObject x="4" y="5" width="28" height="22">'
-        +'<div xmlns="http://www.w3.org/1999/xhtml" style="width:28px;height:22px;display:flex;align-items:center;justify-content:center;font-size:'+fs+'px;line-height:1;">'+s+'</div>'
-        +'</foreignObject></svg></div>';
+        + '<svg width="36" height="46" viewBox="0 0 36 46" xmlns="http://www.w3.org/2000/svg">'
+        + '<ellipse cx="18" cy="44" rx="7" ry="2.5" fill="rgba(0,0,0,0.15)"/>'
+        + '<path d="M18 42C18 42 3 27 3 16C3 8.3 9.8 2 18 2C26.2 2 33 8.3 33 16C33 27 18 42 18 42Z" fill="'+cor+'" stroke="white" stroke-width="2.5"/>'
+        + '<circle cx="18" cy="15" r="11" fill="white" fill-opacity="0.95"/>'
+        + '<foreignObject x="4" y="5" width="28" height="22">'
+        + '<div xmlns="http://www.w3.org/1999/xhtml" style="width:28px;height:22px;display:flex;align-items:center;justify-content:center;font-size:'+fs+'px;line-height:1;">'+s+'</div>'
+        + '</foreignObject></svg></div>';
 }
-function icone(cor,tipo){ return L.divIcon({className:'',html:pinHTML(cor,tipo),iconSize:[36,46],iconAnchor:[18,46],popupAnchor:[0,-48]}); }
-function tipoAg(st,tp){ if(st==='limpo')return 'limpo'; if(st==='analise_operador')return 'analise'; return tp||'lixo'; }
 
-// ── Ler Google Sheets via gviz ───────────────────────────────────
+function icone(cor, tipo) {
+    return L.divIcon({className:'', html:pinHTML(cor,tipo), iconSize:[36,46], iconAnchor:[18,46], popupAnchor:[0,-48]});
+}
+
+function tipoAg(st, tp) {
+    if (st === 'limpo') return 'limpo';
+    if (st === 'analise_operador') return 'analise';
+    return tp || 'lixo';
+}
+
+// ── Ler Google Sheets ────────────────────────────────────────────
 async function lerAba(aba) {
-    const url = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(aba);
+    const url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(aba);
     const res = await fetch(url);
     const txt = await res.text();
     const json = JSON.parse(txt.replace(/^[^\(]+\(/,'').replace(/\);?\s*$/,''));
-    const cols = json.table.cols.map(c=>c.label);
-    return (json.table.rows||[]).map(row=>{
-        const o={};
-        cols.forEach((c,i)=>{ o[c]=row.c&&row.c[i]?row.c[i].v??'':''; });
-        // Coleta todas as colunas foto_url_N em ordem como array
+    const cols = json.table.cols.map(c => c.label);
+    return (json.table.rows || []).map(row => {
+        const o = {};
+        cols.forEach((c, i) => { o[c] = row.c && row.c[i] ? (row.c[i].v ?? '') : ''; });
         const urls = [];
-        let n=1;
-        while (o['foto_url_'+n] !== undefined) {
-            if (o['foto_url_'+n]) urls.push(o['foto_url_'+n]);
+        let n = 1;
+        while (o['foto_url_' + n] !== undefined) {
+            if (o['foto_url_' + n]) urls.push(o['foto_url_' + n]);
             n++;
         }
-        // Compatibilidade com coluna antiga foto_url
         if (!urls.length && o['foto_url']) urls.push(o['foto_url']);
         o._foto_urls = urls;
         return o;
     });
 }
 
-// ── Carregar foto com fallback entre contas ───────────────────────
+// ── Fallback de foto ─────────────────────────────────────────────
 function criarImgComFallback(urls, style) {
-    if (!urls || !urls.length) return '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
-    // Cria img que tenta a próxima URL se a atual falhar (bandwidth esgotado)
-    const id = 'img_' + Math.random().toString(36).slice(2,8);
-    // Registrar URLs globalmente para o fallback
+    if (!urls || !urls.length) {
+        return '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
+    }
+    const id = 'img_' + Math.random().toString(36).slice(2, 9);
     if (!window._imgFallbacks) window._imgFallbacks = {};
     window._imgFallbacks[id] = urls;
-    return '<img id="'+id+'" src="'+urls[0]+'" style="'+style+'" '
-        + 'onerror="_tentarProximaImg(this, \''+id+'\')">';
+    return '<img id="'+id+'" src="'+urls[0]+'" style="'+style+'" onerror="_tentarProximaImg(this,\''+id+'\')">';
 }
 
 function _tentarProximaImg(el, id) {
     const urls = (window._imgFallbacks && window._imgFallbacks[id]) || [];
     const atual = el.src;
-    const idx = urls.indexOf(atual);
+    const idx = urls.findIndex(u => atual.includes(u) || u === atual);
     if (idx >= 0 && idx < urls.length - 1) {
         el.src = urls[idx + 1];
     } else {
@@ -164,77 +163,74 @@ function _tentarProximaImg(el, id) {
 // ── Camada alunos ────────────────────────────────────────────────
 function camadaAlunos(rows) {
     const layer = L.layerGroup();
-    const grupos = [...new Set(rows.map(r=>r.grupo))].sort();
-    grupos.forEach(g=>{ _corGrupo[g]=COR_ALUNO; });
-    rows.forEach(r=>{
-        const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
-        if(isNaN(lat)||isNaN(lon)) return;
-        const cor = COR_ALUNO;
-        const tipo= r.tipo_residuo||'lixo';
+    rows.forEach(r => {
+        const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
+        if (isNaN(lat) || isNaN(lon)) return;
+        const tipo = r.tipo_residuo || 'lixo';
         const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;');
         const popup = '<div style="min-width:200px;">'
             + fotoHtml
-            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128205; Grupo '+r.grupo+'</div>'
-            +'<div style="padding:8px 12px;">'
-            +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
-            +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
-            +'<b>Tipo:</b> '+({'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'}[tipo]||tipo)+'<br>'
-            +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
-            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
-            +'</div></div></div>';
-        L.marker([lat,lon],{icon:icone(cor,tipo)}).bindPopup(popup,{maxWidth:240}).addTo(layer);
+            + '<div style="background:'+COR_ALUNO+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128205; Grupo '+r.grupo+'</div>'
+            + '<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
+            + '<b>Foto:</b> '+(r.foto||'--')+'<br>'
+            + '<b>Tipo:</b> '+({'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'}[tipo]||tipo)+'<br>'
+            + '<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
+            + '<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
+            + '</div></div>';
+        L.marker([lat, lon], {icon: icone(COR_ALUNO, tipo)}).bindPopup(popup, {maxWidth:240}).addTo(layer);
     });
     return layer;
 }
 
-// ── Camada agentes ───────────────────────────────────────────────
-// ── Histórico por ponto (agentes com mesma referência) ────────────
+// ── Histórico ────────────────────────────────────────────────────
 let _histIdx = {};
 window._histSlides = {};
 
-function _navHistIdx(chave, delta, totalSlides) {
-    if (_histIdx[chave] === undefined) _histIdx[chave] = 1;
-    _histIdx[chave] = (_histIdx[chave] + delta + totalSlides) % totalSlides;
+function _navHistIdx(chave, delta, total) {
+    if (_histIdx[chave] === undefined) _histIdx[chave] = 0;
+    _histIdx[chave] = (_histIdx[chave] + delta + total) % total;
     _renderHistSlide(chave);
 }
 
 function _renderHistSlide(chave) {
-    const el  = document.getElementById('hist-slide-'+chave);
-    const ind = document.getElementById('hist-ind-'+chave);
+    const el = document.getElementById('hist-slide-' + chave);
+    const ind = document.getElementById('hist-ind-' + chave);
     if (!el) return;
-    const slides = (window._histSlides && window._histSlides[chave]) || [];
+
+    const slides = window._histSlides[chave] || [];
     if (!slides.length) return;
-    const idx = (_histIdx[chave] !== undefined) ? _histIdx[chave] : 1;
-    const s   = slides[idx] || slides[slides.length-1];
+
+    const idx = _histIdx[chave] ?? 0;
+    const s = slides[idx];
     if (!s) return;
-    if (ind) ind.textContent = idx+'/'+Math.max(0, slides.length-1);
-    let html = '';
+
+    if (ind) ind.textContent = (idx + 1) + '/' + slides.length;
+
+    const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
+
     if (s.tipo === 'aluno') {
-        html = '<div style="background:#dbeafe;border-radius:6px;padding:7px 10px;font-size:12px;line-height:1.7;color:#1e3a8a;">'
+        el.innerHTML = '<div style="background:#dbeafe;border-radius:6px;padding:7px 10px;font-size:12px;line-height:1.7;color:#1e3a8a;">'
             + '<b style="color:#1e40af;">&#128100; Aluno ref.</b> Gr '+s.grupo+' — '+s.foto+'<br>'
             + (s.data ? '<b>Data:</b> '+s.data+' '+(s.hora||'')+'<br>' : '')
             + (s.lat ? '<b>Coord:</b> '+parseFloat(s.lat).toFixed(5)+', '+parseFloat(s.lon).toFixed(5) : '')
             + '</div>';
-        el.innerHTML = html;
-        // Foto do aluno
-        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
-        if (fotoEl && s.urls && s.urls.length) {
-            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
-        }
     } else {
-        const cor = s.status==='limpo'?'#16a34a':s.status==='recorrencia'?'#d97706':'#e53e3e';
-        const labelSt = {'recorrencia':'Recorrência','limpo':'Local limpo','novo_ponto':'Ponto novo'}[s.status]||s.status;
-        const labelTp = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+Poda'}[s.tipo_residuo]||'--';
-        html = '<div style="border-left:3px solid '+cor+';padding:5px 9px;background:#f9fafb;border-radius:0 5px 5px 0;font-size:12px;line-height:1.7;color:#374151;">'
-            + '<b style="color:'+cor+';">&#128119; Visita '+idx+'/'+Math.max(1,slides.length-1)+' — '+labelSt+'</b><br>'
+        const cor = s.status === 'limpo' ? '#16a34a' : s.status === 'recorrencia' ? '#d97706' : '#e53e3e';
+        const labelSt = {'recorrencia':'Recorrência','limpo':'Local limpo','novo_ponto':'Ponto novo'}[s.status] || s.status;
+        const labelTp = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+Poda'}[s.tipo_residuo] || '--';
+        el.innerHTML = '<div style="border-left:3px solid '+cor+';padding:5px 9px;background:#f9fafb;border-radius:0 5px 5px 0;font-size:12px;line-height:1.7;color:#374151;">'
+            + '<b style="color:'+cor+';">&#128119; Visita '+(idx)+'/'+(slides.length-1)+' — '+labelSt+'</b><br>'
             + '<b>Tipo:</b> '+labelTp+'<br>'
             + '<b>Data:</b> '+(s.data||'--')+' '+(s.hora||'')
             + '</div>';
-        el.innerHTML = html;
-        // Foto do agente
-        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
-        if (fotoEl && s.urls && s.urls.length) {
-            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
+    }
+
+    // Atualiza a foto
+    if (fotoEl) {
+        if (s.urls && s.urls.length) {
+            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;');
+        } else {
+            fotoEl.innerHTML = '<div style="background:#f7fafc;padding:20px;text-align:center;font-size:12px;color:#718096;">Sem foto</div>';
         }
     }
 }
@@ -242,159 +238,183 @@ function _renderHistSlide(chave) {
 function camadaAgentes(rows) {
     const layer = L.layerGroup();
     const _cores = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#d69e2e'};
-    const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
+    const _labels = {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
 
-    // Agrupar por referência (mesmo aluno = mesmo ponto)
+    // Agrupa por referência
     const _hist = {};
     rows.forEach(r => {
         if (r.ref_grupo && r.ref_foto) {
-            const chave = r.ref_grupo+'_'+r.ref_foto;
+            const chave = r.ref_grupo + '_' + r.ref_foto;
             if (!_hist[chave]) _hist[chave] = [];
             _hist[chave].push(r);
         }
     });
-    // Ordenar cada grupo por data/hora
-    Object.values(_hist).forEach(arr =>
-        arr.sort((a,b) => ((a.data||'')+(a.hora||'')).localeCompare((b.data||'')+(b.hora||'')))
-    );
 
-    rows.forEach(r=>{
-        const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
-        if(isNaN(lat)||isNaN(lon)) return;
-        const st  = r.status||'novo_ponto';
-        const cor = _cores[st]||'#718096';
-        const chave = (r.ref_grupo && r.ref_foto) ? r.ref_grupo+'_'+r.ref_foto : null;
-        const histArr = chave ? (_hist[chave]||[]) : [];
-        const temHist = !!r.ref_grupo;
+    Object.values(_hist).forEach(arr => {
+        arr.sort((a, b) => ((a.data||'') + (a.hora||'')).localeCompare((b.data||'') + (b.hora||'')));
+    });
 
-        let popup;
+    rows.forEach(r => {
+        const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        const st = r.status || 'novo_ponto';
+        const cor = _cores[st] || '#718096';
+        const chave = (r.ref_grupo && r.ref_foto) ? r.ref_grupo + '_' + r.ref_foto : null;
+        const histArr = chave ? (_hist[chave] || []) : [];
+        const temHist = !!chave;
+
+        let popup = '';
+        let slides = [];
+        let idxAtual = 1;
+
         if (temHist) {
-            // Montar slides: [aluno, ...agentes]
-            const slides = [
-                {tipo:'aluno', grupo:r.ref_grupo, foto:r.ref_foto, lat:lat, lon:lon, data:r.data, hora:r.hora, urls:[], status:st, tipo_residuo:r.tipo_residuo}
-            ];
-            histArr.forEach(ag => slides.push({
-                tipo:'agente', foto:ag.foto, data:ag.data, hora:ag.hora,
-                status:ag.status, tipo_residuo:ag.tipo_residuo,
-                urls: ag._foto_urls||[]
-            }));
-            const idxAtual   = Math.max(1, histArr.findIndex(x=>x.foto===r.foto)+1);
-            const totalSlides = slides.length;
+            // Busca a foto real do aluno
+            const alunoRef = _dadosAl.find(a =>
+                String(a.grupo) === String(r.ref_grupo) &&
+                String(a.foto) === String(r.ref_foto)
+            );
+            const urlsAluno = alunoRef ? (alunoRef._foto_urls || []) : [];
+
+            // Slide 0 = Aluno
+            slides.push({
+                tipo: 'aluno',
+                grupo: r.ref_grupo,
+                foto: r.ref_foto,
+                lat: lat,
+                lon: lon,
+                data: alunoRef ? alunoRef.data : '',
+                hora: alunoRef ? alunoRef.hora : '',
+                urls: urlsAluno
+            });
+
+            // Slides dos agentes
+            histArr.forEach(ag => {
+                slides.push({
+                    tipo: 'agente',
+                    foto: ag.foto,
+                    data: ag.data,
+                    hora: ag.hora,
+                    status: ag.status,
+                    tipo_residuo: ag.tipo_residuo,
+                    urls: ag._foto_urls || []
+                });
+            });
+
+            idxAtual = Math.max(1, histArr.findIndex(x => x.foto === r.foto) + 1);
 
             popup = '<div style="min-width:260px;max-width:300px;">'
-                // Header com navegação
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
-                +'<span>&#128119; '+(_labels[st]||st)+'</span>'
-                +'<span style="display:flex;align-items:center;gap:5px;">'
-                +'<button id="hp-'+chave+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9664;</button>'
-                +'<span id="hist-ind-'+chave+'" style="font-size:11px;min-width:32px;text-align:center;">'+idxAtual+'/'+(totalSlides-1)+'</span>'
-                +'<button id="hp-'+chave+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9654;</button>'
-                +'</span></div>'
-                // Foto
-                +'<div class="hist-foto-wrap">'
-                +criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
-                +'</div>'
-                // Slide info
-                +'<div id="hist-slide-'+chave+'" style="padding:8px 10px;"></div>'
-                +'</div>';
+                + '<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
+                + '<span>&#128119; '+(_labels[st]||st)+'</span>'
+                + '<span style="display:flex;align-items:center;gap:5px;">'
+                + '<button id="hp-'+chave+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:12px;">◀</button>'
+                + '<span id="hist-ind-'+chave+'" style="font-size:11px;min-width:36px;text-align:center;">'+(idxAtual+1)+'/'+slides.length+'</span>'
+                + '<button id="hp-'+chave+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:12px;">▶</button>'
+                + '</span></div>'
+                + '<div class="hist-foto-wrap">'
+                + criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
+                + '</div>'
+                + '<div id="hist-slide-'+chave+'" style="padding:8px 10px;"></div>'
+                + '</div>';
+
+            window._histSlides[chave] = slides;
         } else {
             const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;border-radius:4px 4px 0 0;display:block;');
             popup = '<div style="min-width:200px;">'
-                +fotoHtml
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal — '+(_labels[st]||st)+'</div>'
-                +'<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
-                +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
-                +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
-                +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')
-                +'</div></div>';
+                + fotoHtml
+                + '<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal — '+(_labels[st]||st)+'</div>'
+                + '<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
+                + '<b>Foto:</b> '+(r.foto||'--')+'<br>'
+                + '<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
+                + '<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')
+                + '</div></div>';
         }
 
-        if (temHist) window._histSlides[chave] = slides;
-        const marker = L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))});
-        marker.bindPopup(popup,{maxWidth:310});
+        const marker = L.marker([lat, lon], {icon: icone(cor, tipoAg(st, r.tipo_residuo))});
+        marker.bindPopup(popup, {maxWidth: 310});
+
         if (temHist) {
             marker.on('popupopen', () => {
                 setTimeout(() => {
-                    if (!window._histSlides) window._histSlides = {};
                     _histIdx[chave] = idxAtual;
                     _renderHistSlide(chave);
-                    const bp = document.getElementById('hp-'+chave+'-p');
-                    const bn = document.getElementById('hp-'+chave+'-n');
-                    const totalSl = (window._histSlides[chave]||[]).length;
-                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,-1,totalSl); };
-                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,1,totalSl); };
-                }, 80);
+
+                    const bp = document.getElementById('hp-' + chave + '-p');
+                    const bn = document.getElementById('hp-' + chave + '-n');
+                    const total = (window._histSlides[chave] || []).length;
+
+                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave, -1, total); };
+                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave, 1, total); };
+                }, 50);
             });
         }
+
         marker.addTo(layer);
     });
     return layer;
 }
 
 // ── Toggle ───────────────────────────────────────────────────────
-function setModo(modo){
-    _modo=modo;
-    ['alunos','agentes','ambos'].forEach(m=>{
-        const id='btn-'+m.replace('alunos','al').replace('agentes','ag').replace('ambos','amb');
-        document.getElementById(id)?.classList.toggle('on',m===modo);
+function setModo(modo) {
+    _modo = modo;
+    ['alunos','agentes','ambos'].forEach(m => {
+        const id = 'btn-' + m.replace('alunos','al').replace('agentes','ag').replace('ambos','amb');
+        document.getElementById(id)?.classList.toggle('on', m === modo);
     });
-    if(_camAl) map.removeLayer(_camAl);
-    if(_camAg) map.removeLayer(_camAg);
-    if(modo!=='agentes'&&_camAl) _camAl.addTo(map);
-    if(modo!=='alunos' &&_camAg) _camAg.addTo(map);
+    if (_camAl) map.removeLayer(_camAl);
+    if (_camAg) map.removeLayer(_camAg);
+    if (modo !== 'agentes' && _camAl) _camAl.addTo(map);
+    if (modo !== 'alunos' && _camAg) _camAg.addTo(map);
     atualizarLegenda();
 }
 
 // ── Legenda ──────────────────────────────────────────────────────
-function atualizarLegenda(){
-    const el=document.getElementById('leg');
-    let h='';
-    if(_modo!=='agentes'){
-        h+='<b>Alunos</b>'
-            +'<div><span style="color:#e53e3e;">&#9679;</span> Grupo 01</div>'
-            +'<div><span style="color:#e53e3e;">&#9679;</span> Grupo 02</div>';
-        h+='<b>Tipo res&iacute;duo</b><div>&#128465; Lixo</div><div>&#127795; Poda</div><div>&#127795;&#128465; Lixo+poda</div>';
+function atualizarLegenda() {
+    const el = document.getElementById('leg');
+    let h = '';
+    if (_modo !== 'agentes') {
+        h += '<b>Alunos</b><div><span style="color:#e53e3e;">●</span> Pontos dos alunos</div>';
+        h += '<b>Tipo resíduo</b><div>🗑 Lixo</div><div>🌳 Poda</div><div>🌳🗑 Lixo+poda</div>';
     }
-    if(_modo!=='alunos'){
-        h+='<b>Fiscais</b>'
-            +'<div><span style="color:#e53e3e;">&#9679;</span> Ponto sem registro</div>'
-            +'<div><span style="color:#d69e2e;">&#9679;</span> Recorr&ecirc;ncia</div>'
-            +'<div><span style="color:#38a169;">&#9679;</span> Local limpo (&#10003;)</div>';
+    if (_modo !== 'alunos') {
+        h += '<b>Fiscais</b>'
+            + '<div><span style="color:#e53e3e;">●</span> Ponto sem registro</div>'
+            + '<div><span style="color:#d69e2e;">●</span> Recorrência</div>'
+            + '<div><span style="color:#38a169;">●</span> Local limpo</div>';
     }
-    el.innerHTML=h;
+    el.innerHTML = h;
 }
 
 // ── Init ─────────────────────────────────────────────────────────
-async function init(){
-    // Inicializar mapa aqui garante que Leaflet já carregou
-    map = L.map('map').setView([-7.748,-34.831],13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-        attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+async function init() {
+    map = L.map('map').setView([-7.748, -34.831], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+    }).addTo(map);
 
-    if(!SHEET_ID||SHEET_ID.includes('COLE_')){
-        document.getElementById('load').innerHTML='<div style="font-size:2rem;">&#9888;</div>'
-            +'<b>Configure o SHEET_ID no index.html</b>'
-            +'<p style="font-size:0.8rem;color:#718096;margin-top:6px;">Substitua 1c7rQoSxD5apQhLZwoJ1penV76GVH1gkdvjl16OrsVEU pelo ID real.</p>';
-        return;
-    }
-    try{
-        const [rAl,rAg] = await Promise.all([
-            lerAba(ABA_ALUNOS).catch(()=>[]),
-            lerAba(ABA_AGENTES).catch(()=>[]),
+    try {
+        const [rAl, rAg] = await Promise.all([
+            lerAba(ABA_ALUNOS).catch(() => []),
+            lerAba(ABA_AGENTES).catch(() => [])
         ]);
         _dadosAl = rAl;
         _dadosAg = rAg;
-        document.getElementById('stat-al').textContent = rAl.length+' pontos alunos';
-        document.getElementById('stat-ag').textContent = rAg.length+' pontos agentes';
+        document.getElementById('stat-al').textContent = rAl.length + ' pontos alunos';
+        document.getElementById('stat-ag').textContent = rAg.length + ' pontos agentes';
         _reaplicarCamadas();
-        const todos = [...rAl,...rAg].filter(r=>!isNaN(parseFloat(r.latitude))).map(r=>[parseFloat(r.latitude),parseFloat(r.longitude)]);
-        if(todos.length) map.fitBounds(L.latLngBounds(todos),{padding:[20,20]});
-        document.getElementById('load').style.display='none';
-    }catch(e){
-        document.getElementById('load').innerHTML='<div style="font-size:2rem;">&#9888;</div><b>Erro ao carregar</b><p style="font-size:0.8rem;color:#718096;margin-top:6px;">'+e.message+'</p>';
+
+        const todos = [...rAl, ...rAg]
+            .filter(r => !isNaN(parseFloat(r.latitude)))
+            .map(r => [parseFloat(r.latitude), parseFloat(r.longitude)]);
+        if (todos.length) map.fitBounds(L.latLngBounds(todos), {padding: [30, 30]});
+
+        document.getElementById('load').style.display = 'none';
+    } catch (e) {
+        document.getElementById('load').innerHTML = '<div style="font-size:2rem;">⚠</div><b>Erro ao carregar</b><p style="font-size:0.85rem;color:#718096;margin-top:8px;">'+e.message+'</p>';
     }
 }
+
 window.addEventListener('load', init);
 </script>
 </body>
