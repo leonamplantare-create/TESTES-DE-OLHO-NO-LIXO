@@ -305,8 +305,9 @@ function camadaAgentes(rows) {
                     _renderHistSlide(chave);
                     const bp = document.getElementById('hp-'+chave+'-p');
                     const bn = document.getElementById('hp-'+chave+'-n');
-                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,-1,slides.length); };
-                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,1,slides.length); };
+                    const totalSl = (window._histSlides[chave]||[]).length;
+                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,-1,totalSl); };
+                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,1,totalSl); };
                 }, 80);
             });
         }
