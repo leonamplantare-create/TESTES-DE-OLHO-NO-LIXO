@@ -174,31 +174,143 @@ function camadaAlunos(rows) {
 }
 
 // ── Camada agentes ───────────────────────────────────────────────
+// ── Histórico por ponto (agentes com mesma referência) ────────────
+let _histIdx = {};
+
+function _navHistIdx(chave, delta, totalSlides) {
+    if (_histIdx[chave] === undefined) _histIdx[chave] = 1;
+    _histIdx[chave] = (_histIdx[chave] + delta + totalSlides) % totalSlides;
+    _renderHistSlide(chave);
+}
+
+function _renderHistSlide(chave) {
+    const el  = document.getElementById('hist-slide-'+chave);
+    const ind = document.getElementById('hist-ind-'+chave);
+    if (!el) return;
+    const slides = (window._histSlides && window._histSlides[chave]) || [];
+    const idx    = _histIdx[chave] || 0;
+    const s      = slides[idx];
+    if (!s) return;
+    if (ind) ind.textContent = idx+'/'+Math.max(0, slides.length-1);
+    let html = '';
+    if (s.tipo === 'aluno') {
+        html = '<div style="background:#dbeafe;border-radius:6px;padding:7px 10px;font-size:12px;line-height:1.7;color:#1e3a8a;">'
+            + '<b style="color:#1e40af;">&#128100; Aluno ref.</b> Gr '+s.grupo+' — '+s.foto+'<br>'
+            + (s.data ? '<b>Data:</b> '+s.data+' '+(s.hora||'')+'<br>' : '')
+            + (s.lat ? '<b>Coord:</b> '+parseFloat(s.lat).toFixed(5)+', '+parseFloat(s.lon).toFixed(5) : '')
+            + '</div>';
+        el.innerHTML = html;
+        // Foto do aluno
+        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
+        if (fotoEl && s.urls && s.urls.length) {
+            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
+        }
+    } else {
+        const cor = s.status==='limpo'?'#16a34a':s.status==='recorrencia'?'#d97706':'#e53e3e';
+        const labelSt = {'recorrencia':'Recorrência','limpo':'Local limpo','novo_ponto':'Ponto novo'}[s.status]||s.status;
+        const labelTp = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+Poda'}[s.tipo_residuo]||'--';
+        html = '<div style="border-left:3px solid '+cor+';padding:5px 9px;background:#f9fafb;border-radius:0 5px 5px 0;font-size:12px;line-height:1.7;color:#374151;">'
+            + '<b style="color:'+cor+';">&#128119; Visita '+idx+'/'+Math.max(1,slides.length-1)+' — '+labelSt+'</b><br>'
+            + '<b>Tipo:</b> '+labelTp+'<br>'
+            + '<b>Data:</b> '+(s.data||'--')+' '+(s.hora||'')
+            + '</div>';
+        el.innerHTML = html;
+        // Foto do agente
+        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
+        if (fotoEl && s.urls && s.urls.length) {
+            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
+        }
+    }
+}
+
 function camadaAgentes(rows) {
     const layer = L.layerGroup();
     const _cores = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#d69e2e'};
-    const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorr\u00eancia','limpo':'Local limpo','analise_operador':'Recorr\u00eancia'};
+    const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
+
+    // Agrupar por referência (mesmo aluno = mesmo ponto)
+    if (!window._histSlides) window._histSlides = {};
+    const _hist = {};
+    rows.forEach(r => {
+        if (r.ref_grupo && r.ref_foto) {
+            const chave = r.ref_grupo+'_'+r.ref_foto;
+            if (!_hist[chave]) _hist[chave] = [];
+            _hist[chave].push(r);
+        }
+    });
+    // Ordenar cada grupo por data/hora
+    Object.values(_hist).forEach(arr =>
+        arr.sort((a,b) => ((a.data||'')+(a.hora||'')).localeCompare((b.data||'')+(b.hora||'')))
+    );
+
     rows.forEach(r=>{
         const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
         if(isNaN(lat)||isNaN(lon)) return;
         const st  = r.status||'novo_ponto';
         const cor = _cores[st]||'#718096';
-        const refInfo = r.ref_grupo
-            ? '<br><b>Ref:</b> G'+r.ref_grupo+'/'+r.ref_foto+' ('+r.ref_distancia+'m)'
-            : '';
-        const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:180px;object-fit:cover;border-radius:4px 4px 0 0;display:block;');
-        const popup = '<div style="min-width:200px;">'
-            + fotoHtml
-            +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal \u2014 '+(_labels[st]||st)+'</div>'
-            +'<div style="padding:8px 12px;">'
-            +'<div style="font-size:12px;line-height:1.9;color:#2d3748;">'
-            +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
-            +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
-            +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
-            +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)+refInfo
-            +'</div></div></div>';
-        L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))}).bindPopup(popup,{maxWidth:260}).addTo(layer);
+        const chave = (r.ref_grupo && r.ref_foto) ? r.ref_grupo+'_'+r.ref_foto : null;
+        const histArr = chave ? (_hist[chave]||[]) : [];
+        const temHist = !!r.ref_grupo;
+
+        let popup;
+        if (temHist) {
+            // Montar slides: [aluno, ...agentes]
+            const slides = [
+                {tipo:'aluno', grupo:r.ref_grupo, foto:r.ref_foto, lat:lat, lon:lon, data:r.data, hora:r.hora, urls:[], status:st, tipo_residuo:r.tipo_residuo}
+            ];
+            histArr.forEach(ag => slides.push({
+                tipo:'agente', foto:ag.foto, data:ag.data, hora:ag.hora,
+                status:ag.status, tipo_residuo:ag.tipo_residuo,
+                urls: ag._foto_urls||[]
+            }));
+            const idxAtual   = Math.max(1, histArr.findIndex(x=>x.foto===r.foto)+1);
+            const totalSlides = slides.length;
+
+            popup = '<div style="min-width:260px;max-width:300px;">'
+                // Header com navegação
+                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
+                +'<span>&#128119; '+(_labels[st]||st)+'</span>'
+                +'<span style="display:flex;align-items:center;gap:5px;">'
+                +'<button id="hp-'+chave+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9664;</button>'
+                +'<span id="hist-ind-'+chave+'" style="font-size:11px;min-width:32px;text-align:center;">'+idxAtual+'/'+(totalSlides-1)+'</span>'
+                +'<button id="hp-'+chave+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9654;</button>'
+                +'</span></div>'
+                // Foto
+                +'<div class="hist-foto-wrap">'
+                +criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
+                +'</div>'
+                // Slide info
+                +'<div id="hist-slide-'+chave+'" style="padding:8px 10px;"></div>'
+                +'</div>';
+        } else {
+            const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;border-radius:4px 4px 0 0;display:block;');
+            popup = '<div style="min-width:200px;">'
+                +fotoHtml
+                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal — '+(_labels[st]||st)+'</div>'
+                +'<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
+                +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
+                +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
+                +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')
+                +'</div></div>';
+        }
+
+        if (temHist) window._histSlides[chave] = slides;
+        const marker = L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))});
+        marker.bindPopup(popup,{maxWidth:310});
+        if (temHist) {
+            marker.on('popupopen', () => {
+                setTimeout(() => {
+                    _histIdx[chave] = idxAtual;
+                    _renderHistSlide(chave);
+                    const bp = document.getElementById('hp-'+chave+'-p');
+                    const bn = document.getElementById('hp-'+chave+'-n');
+                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,-1,slides.length); };
+                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,1,slides.length); };
+                }, 80);
+            });
+        }
+        marker.addTo(layer);
     });
     return layer;
 }
