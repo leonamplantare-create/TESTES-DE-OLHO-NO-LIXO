@@ -142,24 +142,18 @@ function criarImgComFallback(urls, style) {
     if (!urls || !urls.length) {
         return '<div style="background:#f7fafc;padding:10px;text-align:center;font-size:11px;color:#718096;">Foto n&#227;o dispon&#237;vel</div>';
     }
-
     const id = 'img_' + Math.random().toString(36).slice(2, 9);
-    // Armazena as URLs de forma segura
     window._imgFallbacks = window._imgFallbacks || {};
     window._imgFallbacks[id] = urls;
-
-    return `<img id="${id}" src="${urls[0]}" style="${style}" 
-        onerror="window.handleImgError && window.handleImgError(this)">`;
+    return `<img id="${id}" src="${urls[0]}" style="${style}" onerror="window.handleImgError && window.handleImgError(this)">`;
 }
 
-// Função global de fallback de imagem (evita arguments.callee)
 window.handleImgError = function(img) {
     const id = img.id;
     const urls = (window._imgFallbacks && window._imgFallbacks[id]) || [];
     const currentSrc = img.src;
     const currentIndex = urls.findIndex(u => currentSrc.includes(u) || u === currentSrc);
     const nextIndex = currentIndex + 1;
-
     if (nextIndex < urls.length) {
         img.src = urls[nextIndex];
     } else {
@@ -172,7 +166,6 @@ function camadaAlunos(rows) {
     const layer = L.layerGroup();
     const grupos = [...new Set(rows.map(r=>r.grupo))].sort();
     grupos.forEach(g=>{ _corGrupo[g]=COR_ALUNO; });
-
     rows.forEach(r=>{
         const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
         if(isNaN(lat)||isNaN(lon)) return;
@@ -208,17 +201,16 @@ function _renderHistSlide(chave) {
     const el = document.getElementById('hist-slide-'+chave);
     const ind = document.getElementById('hist-ind-'+chave);
     if (!el) return;
-
     const slides = (window._histSlides && window._histSlides[chave]) || [];
     if (!slides.length) return;
-
     const idx = (_histIdx[chave] !== undefined) ? _histIdx[chave] : 1;
     const s = slides[idx] || slides[slides.length-1];
     if (!s) return;
-
     if (ind) ind.textContent = idx + '/' + Math.max(0, slides.length-1);
 
     let html = '';
+    const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
+
     if (s.tipo === 'aluno') {
         html = '<div style="background:#dbeafe;border-radius:6px;padding:7px 10px;font-size:12px;line-height:1.7;color:#1e3a8a;">'
             + '<b style="color:#1e40af;">&#128100; Aluno ref.</b> Gr '+s.grupo+' — '+s.foto+'<br>'
@@ -226,10 +218,8 @@ function _renderHistSlide(chave) {
             + (s.lat ? '<b>Coord:</b> '+parseFloat(s.lat).toFixed(5)+', '+parseFloat(s.lon).toFixed(5) : '')
             + '</div>';
         el.innerHTML = html;
-
-        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
         if (fotoEl && s.urls && s.urls.length) {
-            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
+            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;');
         }
     } else {
         const cor = s.status==='limpo'?'#16a34a':s.status==='recorrencia'?'#d97706':'#e53e3e';
@@ -241,10 +231,8 @@ function _renderHistSlide(chave) {
             + '<b>Data:</b> '+(s.data||'--')+' '+(s.hora||'')
             + '</div>';
         el.innerHTML = html;
-
-        const fotoEl = el.closest('.leaflet-popup-content')?.querySelector('.hist-foto-wrap');
         if (fotoEl && s.urls && s.urls.length) {
-            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;border-radius:4px 4px 0 0;');
+            fotoEl.innerHTML = criarImgComFallback(s.urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;');
         }
     }
 }
@@ -255,7 +243,6 @@ function camadaAgentes(rows) {
     const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
 
-    // Agrupar por referência
     const _hist = {};
     rows.forEach(r => {
         if (r.ref_grupo && r.ref_foto) {
@@ -284,13 +271,13 @@ function camadaAgentes(rows) {
 
         if (temHist) {
             // Busca a foto real do aluno
-            const alunoRef = _dadosAl.find(a => 
-                String(a.grupo) === String(r.ref_grupo) && 
+            const alunoRef = _dadosAl.find(a =>
+                String(a.grupo) === String(r.ref_grupo) &&
                 String(a.foto) === String(r.ref_foto)
             );
             const urlsAluno = alunoRef ? (alunoRef._foto_urls || []) : [];
 
-            // Slide do aluno (referência)
+            // Slide 0 = Aluno (referência)
             slides = [{
                 tipo: 'aluno',
                 grupo: r.ref_grupo,
@@ -304,7 +291,7 @@ function camadaAgentes(rows) {
                 tipo_residuo: r.tipo_residuo
             }];
 
-            // Slides dos agentes
+            // Slides seguintes = agentes
             histArr.forEach(ag => {
                 slides.push({
                     tipo: 'agente',
@@ -358,7 +345,18 @@ function camadaAgentes(rows) {
                     _renderHistSlide(chave);
 
                     const bp = document.getElementById('hp-' + chave + '-p');
-                    const bn = document.getElementBy
+                    const bn = document.getElementById('hp-' + chave + '-n');
+                    const totalSl = (window._histSlides[chave] || []).length;
+
+                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave, -1, totalSl); };
+                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave, 1, totalSl); };
+                }, 80);
+            });
+        }
+        marker.addTo(layer);
+    });
+    return layer;
+}
 
 // ── Toggle ───────────────────────────────────────────────────────
 function setModo(modo){
