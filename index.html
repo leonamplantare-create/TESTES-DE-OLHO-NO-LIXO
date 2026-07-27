@@ -259,7 +259,7 @@ function camadaAgentes(rows) {
     const _hist = {};
     rows.forEach(r => {
         if (r.ref_grupo && r.ref_foto) {
-            const chave = r.ref_grupo+'_'+r.ref_foto;
+            const chave = r.ref_grupo + '_' + r.ref_foto;
             if (!_hist[chave]) _hist[chave] = [];
             _hist[chave].push(r);
         }
@@ -269,83 +269,96 @@ function camadaAgentes(rows) {
         arr.sort((a,b) => ((a.data||'')+(a.hora||'')).localeCompare((b.data||'')+(b.hora||'')))
     );
 
-    rows.forEach(r=>{
-        const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
-        if(isNaN(lat)||isNaN(lon)) return;
+    rows.forEach(r => {
+        const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
+        if (isNaN(lat) || isNaN(lon)) return;
 
-        const st = r.status||'novo_ponto';
-        const cor = _cores[st]||'#718096';
-        const chave = (r.ref_grupo && r.ref_foto) ? r.ref_grupo+'_'+r.ref_foto : null;
-        const histArr = chave ? (_hist[chave]||[]) : [];
+        const st = r.status || 'novo_ponto';
+        const cor = _cores[st] || '#718096';
+        const chave = (r.ref_grupo && r.ref_foto) ? r.ref_grupo + '_' + r.ref_foto : null;
+        const histArr = chave ? (_hist[chave] || []) : [];
         const temHist = !!r.ref_grupo;
 
         let popup;
-        let slides = []; // declarado aqui para evitar erro de escopo
+        let slides = [];
 
         if (temHist) {
-            slides = [
-                {tipo:'aluno', grupo:r.ref_grupo, foto:r.ref_foto, lat:lat, lon:lon, data:r.data, hora:r.hora, urls:[], status:st, tipo_residuo:r.tipo_residuo}
-            ];
-            histArr.forEach(ag => slides.push({
-                tipo:'agente', foto:ag.foto, data:ag.data, hora:ag.hora,
-                status:ag.status, tipo_residuo:ag.tipo_residuo,
-                urls: ag._foto_urls||[]
-            }));
+            // Busca a foto real do aluno
+            const alunoRef = _dadosAl.find(a => 
+                String(a.grupo) === String(r.ref_grupo) && 
+                String(a.foto) === String(r.ref_foto)
+            );
+            const urlsAluno = alunoRef ? (alunoRef._foto_urls || []) : [];
 
-            const idxAtual = Math.max(1, histArr.findIndex(x=>x.foto===r.foto)+1);
+            // Slide do aluno (referência)
+            slides = [{
+                tipo: 'aluno',
+                grupo: r.ref_grupo,
+                foto: r.ref_foto,
+                lat: lat,
+                lon: lon,
+                data: alunoRef ? alunoRef.data : r.data,
+                hora: alunoRef ? alunoRef.hora : r.hora,
+                urls: urlsAluno,
+                status: st,
+                tipo_residuo: r.tipo_residuo
+            }];
+
+            // Slides dos agentes
+            histArr.forEach(ag => {
+                slides.push({
+                    tipo: 'agente',
+                    foto: ag.foto,
+                    data: ag.data,
+                    hora: ag.hora,
+                    status: ag.status,
+                    tipo_residuo: ag.tipo_residuo,
+                    urls: ag._foto_urls || []
+                });
+            });
+
+            const idxAtual = Math.max(1, histArr.findIndex(x => x.foto === r.foto) + 1);
             const totalSlides = slides.length;
 
             popup = '<div style="min-width:260px;max-width:300px;">'
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
-                +'<span>&#128119; '+(_labels[st]||st)+'</span>'
-                +'<span style="display:flex;align-items:center;gap:5px;">'
-                +'<button id="hp-'+chave+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9664;</button>'
-                +'<span id="hist-ind-'+chave+'" style="font-size:11px;min-width:32px;text-align:center;">'+idxAtual+'/'+(totalSlides-1)+'</span>'
-                +'<button id="hp-'+chave+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9654;</button>'
-                +'</span></div>'
-                +'<div class="hist-foto-wrap">'
-                +criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
-                +'</div>'
-                +'<div id="hist-slide-'+chave+'" style="padding:8px 10px;"></div>'
-                +'</div>';
+                + '<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
+                + '<span>&#128119; '+(_labels[st]||st)+'</span>'
+                + '<span style="display:flex;align-items:center;gap:5px;">'
+                + '<button id="hp-'+chave+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9664;</button>'
+                + '<span id="hist-ind-'+chave+'" style="font-size:11px;min-width:32px;text-align:center;">'+idxAtual+'/'+(totalSlides-1)+'</span>'
+                + '<button id="hp-'+chave+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:22px;height:22px;cursor:pointer;">&#9654;</button>'
+                + '</span></div>'
+                + '<div class="hist-foto-wrap">'
+                + criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
+                + '</div>'
+                + '<div id="hist-slide-'+chave+'" style="padding:8px 10px;"></div>'
+                + '</div>';
 
-            // Guarda os slides
             window._histSlides[chave] = slides;
         } else {
             const fotoHtml = criarImgComFallback(r._foto_urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;border-radius:4px 4px 0 0;display:block;');
             popup = '<div style="min-width:200px;">'
-                +fotoHtml
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal — '+(_labels[st]||st)+'</div>'
-                +'<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
-                +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
-                +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
-                +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')
-                +'</div></div>';
+                + fotoHtml
+                + '<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#128119; Fiscal — '+(_labels[st]||st)+'</div>'
+                + '<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
+                + '<b>Foto:</b> '+(r.foto||'--')+'<br>'
+                + '<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
+                + '<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')
+                + '</div></div>';
         }
 
-        const marker = L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))});
-        marker.bindPopup(popup,{maxWidth:310});
+        const marker = L.marker([lat, lon], {icon: icone(cor, tipoAg(st, r.tipo_residuo))});
+        marker.bindPopup(popup, {maxWidth: 310});
 
         if (temHist) {
             marker.on('popupopen', () => {
                 setTimeout(() => {
                     if (!window._histSlides) window._histSlides = {};
-                    _histIdx[chave] = Math.max(1, histArr.findIndex(x=>x.foto===r.foto)+1);
+                    _histIdx[chave] = Math.max(1, histArr.findIndex(x => x.foto === r.foto) + 1);
                     _renderHistSlide(chave);
 
-                    const bp = document.getElementById('hp-'+chave+'-p');
-                    const bn = document.getElementById('hp-'+chave+'-n');
-                    const totalSl = (window._histSlides[chave]||[]).length;
-
-                    if (bp) bp.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,-1,totalSl); };
-                    if (bn) bn.onclick = (e) => { e.stopPropagation(); _navHistIdx(chave,1,totalSl); };
-                }, 80);
-            });
-        }
-        marker.addTo(layer);
-    });
-    return layer;
-}
+                    const bp = document.getElementById('hp-' + chave + '-p');
+                    const bn = document.getElementBy
 
 // ── Toggle ───────────────────────────────────────────────────────
 function setModo(modo){
