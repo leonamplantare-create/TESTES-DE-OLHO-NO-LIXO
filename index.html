@@ -176,6 +176,7 @@ function camadaAlunos(rows) {
 // ── Camada agentes ───────────────────────────────────────────────
 // ── Histórico por ponto (agentes com mesma referência) ────────────
 let _histIdx = {};
+window._histSlides = {};
 
 function _navHistIdx(chave, delta, totalSlides) {
     if (_histIdx[chave] === undefined) _histIdx[chave] = 1;
@@ -188,8 +189,9 @@ function _renderHistSlide(chave) {
     const ind = document.getElementById('hist-ind-'+chave);
     if (!el) return;
     const slides = (window._histSlides && window._histSlides[chave]) || [];
-    const idx    = _histIdx[chave] || 0;
-    const s      = slides[idx];
+    if (!slides.length) return;
+    const idx = (_histIdx[chave] !== undefined) ? _histIdx[chave] : 1;
+    const s   = slides[idx] || slides[slides.length-1];
     if (!s) return;
     if (ind) ind.textContent = idx+'/'+Math.max(0, slides.length-1);
     let html = '';
@@ -230,7 +232,6 @@ function camadaAgentes(rows) {
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
 
     // Agrupar por referência (mesmo aluno = mesmo ponto)
-    if (!window._histSlides) window._histSlides = {};
     const _hist = {};
     rows.forEach(r => {
         if (r.ref_grupo && r.ref_foto) {
@@ -301,6 +302,7 @@ function camadaAgentes(rows) {
         if (temHist) {
             marker.on('popupopen', () => {
                 setTimeout(() => {
+                    if (!window._histSlides) window._histSlides = {};
                     _histIdx[chave] = idxAtual;
                     _renderHistSlide(chave);
                     const bp = document.getElementById('hp-'+chave+'-p');
