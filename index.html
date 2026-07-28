@@ -374,6 +374,58 @@ async function init() {
     }
 }
 window.addEventListener('load', init);
+
+// ── Registro de visitas (Google Sheets via Apps Script) ─────────
+// 1. Cole a URL do seu Web App abaixo (depois de publicar o Apps Script)
+const VISITAS_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_SEU_WEB_APP';
+
+async function registrarVisita() {
+    // Não faz nada se a URL ainda não foi configurada
+    if (!VISITAS_SCRIPT_URL || VISITAS_SCRIPT_URL.includes('COLE_AQUI')) return;
+
+    try {
+        // 1) Geolocalização por IP (sem pedir permissão ao usuário)
+        let cidade = '', estado = '', pais = '', ip = '';
+        try {
+            const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json', { cache: 'no-store' });
+            if (geoRes.ok) {
+                const geo = await geoRes.json();
+                cidade = geo.city || '';
+                estado = geo.region || '';
+                pais   = geo.country || '';
+                ip     = geo.ip || '';
+            }
+        } catch (_) { /* continua mesmo sem geo */ }
+
+        // 2) Código do agente (se vier na URL: ?agente=joao)
+        const params = new URLSearchParams(window.location.search);
+        const agente = params.get('agente') || '';
+
+        // 3) Monta os dados
+        const dados = {
+            data: new Date().toLocaleString('pt-BR', { timeZone: 'America/Recife' }),
+            cidade: cidade,
+            estado: estado,
+            pais: pais,
+            referrer: document.referrer || 'direto',
+            userAgent: navigator.userAgent.substring(0, 180),
+            agente: agente,
+            ip: ip
+        };
+
+        // 4) Envia para o Apps Script (GET com parâmetros – evita problemas de CORS)
+        const url = VISITAS_SCRIPT_URL + '?' + new URLSearchParams(dados).toString();
+        await fetch(url, { method: 'GET', mode: 'no-cors' });
+        // mode: 'no-cors' = o navegador envia, mas não lê a resposta (normal e esperado)
+    } catch (err) {
+        // Silencioso – não atrapalha o mapa se o registro falhar
+        console.warn('Registro de visita falhou:', err);
+    }
+}
+
+// Chama o registro em paralelo (não bloqueia o carregamento do mapa)
+window.addEventListener('load', () => { registrarVisita(); });
+
 </script>
 </body>
 </html>
