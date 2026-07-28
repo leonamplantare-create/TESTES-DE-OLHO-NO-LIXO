@@ -383,6 +383,12 @@ async function registrarVisita() {
     // Não faz nada se a URL ainda não foi configurada
     if (!VISITAS_SCRIPT_URL || VISITAS_SCRIPT_URL.includes('COLE_AQUI')) return;
 
+    // Só registra 1 vez por sessão (não fica gravando enquanto a pessoa olha o mapa)
+    try {
+        if (sessionStorage.getItem('mapa_vivo_visita')) return;
+        sessionStorage.setItem('mapa_vivo_visita', '1');
+    } catch (_) {}
+
     try {
         // 1) Geolocalização por IP (sem pedir permissão ao usuário)
         let cidade = '', estado = '', pais = '', ip = '';
@@ -415,7 +421,7 @@ async function registrarVisita() {
 
         // 4) Envia para o Apps Script (GET com parâmetros – evita problemas de CORS)
         const url = VISITAS_SCRIPT_URL + '?' + new URLSearchParams(dados).toString();
-        await fetch(url, { method: 'GET', mode: 'no-cors' });
+        await fetch(url, { method: 'GET', mode: 'no-cors', redirect: 'follow' });
         // mode: 'no-cors' = o navegador envia, mas não lê a resposta (normal e esperado)
     } catch (err) {
         // Silencioso – não atrapalha o mapa se o registro falhar
