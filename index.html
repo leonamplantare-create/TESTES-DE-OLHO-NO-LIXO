@@ -418,71 +418,82 @@ function _bindHistNav(chave) {
     _bindFotoZoom(document.getElementById('hist-foto-' + sid));
 }
 
+function _normFotoNome(s) {
+    return String(s || '').toLowerCase().replace(/\.(jpeg|jpg|png|webp|gif)$/i, '').trim();
+}
+
+function _urlsAlunoRef(refGrupo, refFoto) {
+    const target = _normFotoNome(refFoto);
+    if (!target) return [];
+    const lista = _dadosAl || [];
+    // 1) grupo + foto
+    for (let i = 0; i < lista.length; i++) {
+        const a = lista[i];
+        if (String(a.grupo) === String(refGrupo) && _normFotoNome(a.foto) === target) {
+            if (a._foto_urls && a._foto_urls.length) return a._foto_urls.slice();
+        }
+    }
+    // 2) só pelo nome da foto
+    for (let i = 0; i < lista.length; i++) {
+        const a = lista[i];
+        if (_normFotoNome(a.foto) === target && a._foto_urls && a._foto_urls.length) {
+            return a._foto_urls.slice();
+        }
+    }
+    return [];
+}
+
+function _chaveHistorico(r, lat, lon) {
+    // Recorrência real: mesmo aluno de referência
+    if (r.ref_grupo && r.ref_foto) {
+        return 'ref_' + String(r.ref_grupo).trim() + '_' + _normFotoNome(r.ref_foto);
+    }
+    // Empilhados no mesmo ponto (~1 m) — não mistura locais diferentes
+    return 'grid_' + lat.toFixed(5) + '_' + lon.toFixed(5);
+}
+
 function camadaAgentes(rows) {
     const layer = L.layerGroup();
     const _cores = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#d69e2e'};
     const _labels= {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
     const _tipos = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
 
-    // ── Agrupa visitas próximas OU com mesmo ref_grupo+ref_foto ──
-    // Distância ~25 m (0.00022 graus)
-    const DIST = 0.00022;
-    const items = [];
-    rows.forEach((r, i) => {
+    // Agrupa SOMENTE por chave de histórico (ref do aluno OU grid apertado)
+    // NÃO usa distância frouxa — evitava misturar cenário A com cenário B
+    const grupos = {};
+    rows.forEach(r => {
         const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
         if (isNaN(lat) || isNaN(lon)) return;
-        items.push({ r, lat, lon, i, parent: items.length });
+        const chave = _chaveHistorico(r, lat, lon);
+        if (!grupos[chave]) grupos[chave] = [];
+        grupos[chave].push({ r: r, lat: lat, lon: lon });
     });
-    function find(a) {
-        let p = a;
-        while (items[p].parent !== p) p = items[p].parent;
-        let x = a;
-        while (items[x].parent !== x) { const n = items[x].parent; items[x].parent = p; x = n; }
-        return p;
-    }
-    function union(a, b) {
-        const ra = find(a), rb = find(b);
-        if (ra !== rb) items[rb].parent = ra;
-    }
-    for (let a = 0; a < items.length; a++) {
-        for (let b = a + 1; b < items.length; b++) {
-            const A = items[a], B = items[b];
-            const near = Math.abs(A.lat - B.lat) < DIST && Math.abs(A.lon - B.lon) < DIST;
-            const sameRef = A.r.ref_grupo && A.r.ref_foto && A.r.ref_grupo === B.r.ref_grupo && A.r.ref_foto === B.r.ref_foto;
-            if (near || sameRef) union(a, b);
-        }
-    }
-    const clusters = {};
-    items.forEach((it, idx) => {
-        const root = find(idx);
-        if (!clusters[root]) clusters[root] = [];
-        clusters[root].push(it);
-    });
-    // mapa foto -> chave do cluster
-    const clusterByFoto = {};
-    Object.keys(clusters).forEach(root => {
-        const chave = 'loc_' + root;
-        clusters[root].forEach(it => { clusterByFoto[it.r.foto] = chave; });
+    Object.keys(grupos).forEach(function(k) {
+        grupos[k].sort(function(a, b) {
+            return ((a.r.data||'') + (a.r.hora||'')).localeCompare((b.r.data||'') + (b.r.hora||''));
+        });
     });
 
-    items.forEach((it, idx) => {
-        const r = it.r, lat = it.lat, lon = it.lon;
+    rows.forEach(function(r) {
+        const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
+        if (isNaN(lat) || isNaN(lon)) return;
         const st  = r.status || 'novo_ponto';
         const cor = _cores[st] || '#718096';
-        const root = find(idx);
-        const chave = 'loc_' + root;
-        const membros = (clusters[root] || [it]).slice();
-        membros.sort((a, b) => ((a.r.data||'')+(a.r.hora||'')).localeCompare((b.r.data||'')+(b.r.hora||'')));
+        const chave = _chaveHistorico(r, lat, lon);
+        const membros = grupos[chave] || [{ r: r, lat: lat, lon: lon }];
 
-        // Monta slides: refs de aluno únicos + todas visitas de agente do cluster
+        // Slides: foto(s) do aluno ref (se houver) + visitas do agente neste grupo
         const slides = [];
         const refsFeitos = {};
-        membros.forEach(m => {
+        membros.forEach(function(m) {
             const rr = m.r;
             if (rr.ref_grupo && rr.ref_foto) {
-                const rk = rr.ref_grupo + '_' + rr.ref_foto;
+                const rk = String(rr.ref_grupo).trim() + '_' + _normFotoNome(rr.ref_foto);
                 if (!refsFeitos[rk]) {
                     refsFeitos[rk] = true;
+                    var urlsAluno = (rr._ref_foto_urls && rr._ref_foto_urls.length)
+                        ? rr._ref_foto_urls.slice()
+                        : _urlsAlunoRef(rr.ref_grupo, rr.ref_foto);
                     slides.push({
                         tipo: 'aluno',
                         grupo: rr.ref_grupo,
@@ -491,14 +502,14 @@ function camadaAgentes(rows) {
                         lon: rr.ref_lon || m.lon,
                         data: rr.data,
                         hora: rr.hora,
-                        urls: rr._ref_foto_urls || [],
+                        urls: urlsAluno,
                         status: rr.status,
                         tipo_residuo: rr.tipo_residuo
                     });
                 }
             }
         });
-        membros.forEach(m => {
+        membros.forEach(function(m) {
             const rr = m.r;
             slides.push({
                 tipo: 'agente',
@@ -515,8 +526,7 @@ function camadaAgentes(rows) {
 
         window._histSlides[chave] = slides;
         const temHist = slides.length > 1;
-        // índice deste pin dentro dos slides de agente
-        let idxAtual = slides.findIndex(s => s.tipo === 'agente' && s.foto === r.foto);
+        let idxAtual = slides.findIndex(function(s){ return s.tipo === 'agente' && s.foto === r.foto; });
         if (idxAtual < 0) idxAtual = slides.length - 1;
 
         const sid = _safeId(chave);
