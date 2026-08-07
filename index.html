@@ -159,15 +159,20 @@ function _reaplicarCamadas() {
 function pinHTML(cor, tipo, scale) {
     scale = scale || 1;
     const w = Math.round(32 * scale), h = Math.round(42 * scale);
-    const ball = Math.round(32 * scale), inner = Math.round(28 * scale), top = Math.round(2 * scale);
-    const fs = Math.max(10, Math.round(13 * scale));
+    const ball = Math.max(8, Math.round(32 * scale));
+    const inner = Math.max(6, Math.round(28 * scale));
+    const top = Math.max(1, Math.round(2 * scale));
+    // emoji acompanha o pino (mín 5px para ainda dar para ver)
+    const baseFs = (tipo === 'lixo_poda') ? 11 : 13;
+    const fs = Math.max(5, Math.min(18, Math.round(baseFs * scale)));
+    const border = scale < 0.45 ? 1 : 2;
     const emoji = {'lixo':'🗑','poda':'🌳','lixo_poda':'🌳🗑','limpo':'✓','analise':'⚠'}[tipo]||'🗑';
     return '<div class="mv-pin" style="position:relative;width:'+w+'px;height:'+h+'px;">'
         +'<div style="'
         +'width:'+ball+'px;height:'+ball+'px;border-radius:50% 50% 50% 0;'
-        +'background:'+cor+';border:2px solid #fff;'
+        +'background:'+cor+';border:'+border+'px solid #fff;'
         +'transform:rotate(-45deg);'
-        +'box-shadow:0 2px 6px rgba(0,0,0,0.3);'
+        +'box-shadow:0 '+Math.max(1,Math.round(2*scale))+'px '+Math.max(2,Math.round(6*scale))+'px rgba(0,0,0,0.3);'
         +'position:absolute;top:0;left:0;'
         +'"></div>'
         +'<div style="'
@@ -178,18 +183,25 @@ function pinHTML(cor, tipo, scale) {
         +'">'+emoji+'</div>'
         +'</div>';
 }
+// Limites de escala do pino (trava mínima e máxima)
+const PIN_SCALE_MIN = 0.35;
+const PIN_SCALE_MAX = 1.25;
 function _pinScale() {
     if (!map) return 1;
     const z = map.getZoom();
-    // bem menor de longe, maior de perto — reduz sobreposição
-    if (z <= 11) return 0.28;
-    if (z === 12) return 0.38;
-    if (z === 13) return 0.50;
-    if (z === 14) return 0.68;
-    if (z === 15) return 0.88;
-    if (z === 16) return 1.10;
-    if (z === 17) return 1.30;
-    return 1.45;
+    let s;
+    if (z <= 11) s = 0.35;
+    else if (z === 12) s = 0.42;
+    else if (z === 13) s = 0.55;
+    else if (z === 14) s = 0.72;
+    else if (z === 15) s = 0.90;
+    else if (z === 16) s = 1.08;
+    else if (z === 17) s = 1.18;
+    else s = 1.25;
+    // trava
+    if (s < PIN_SCALE_MIN) s = PIN_SCALE_MIN;
+    if (s > PIN_SCALE_MAX) s = PIN_SCALE_MAX;
+    return s;
 }
 
 // ── Escala dos pinos com zoom ───────────────────────────────────
