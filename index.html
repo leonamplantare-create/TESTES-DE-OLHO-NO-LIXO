@@ -70,7 +70,7 @@ header p{font-size:0.72rem;opacity:.8;}
       <button class="btn-t"    id="btn-ag"  onclick="setModo('agentes')" style="text-align:left;">&#128119; Agentes</button>
       <button class="btn-t"    id="btn-amb" onclick="setModo('ambos')" style="text-align:left;">&#127758; Ambos</button>
       <button class="btn-t"    id="btn-esc" onclick="setModo('escolas')" style="text-align:left;">&#127979; Escolas</button>
-      <button class="btn-t"    id="btn-escolas" onclick="setModoEscolas()" style="text-align:left;">&#127979; Escolas Municipais</button>
+
     </div>
   </div>
   <hr style="border:none;border-top:1px solid #e0ddd5;margin:8px 0;">
@@ -117,7 +117,6 @@ let _corGrupo = {};
 
 let map, _modo = 'alunos', _camAl = null, _camAg = null, _camEsc = null;
 let _filtroTipo = 'todos';
-let _modoEscolas = false;
 let _dadosAl = [], _dadosAg = [], _dadosEsc = [];
 
 function setFiltroTipo(tipo) {
@@ -272,13 +271,8 @@ function camadaAlunos(rows) {
     const grupos = [...new Set(rows.map(r=>r.grupo))].sort();
     grupos.forEach(g=>{ _corGrupo[g]=COR_ALUNO; });
 
-    // Filtrar por modalidade se modo "escolas" estiver ativo
-    const listaFiltrada = _modoEscolas
-        ? rows.filter(r => r.modalidade === 'livre')
-        : rows.filter(r => r.modalidade !== 'livre');
-
     let _pinCount = 0;
-    listaFiltrada.forEach(r=>{
+    rows.forEach(r=>{
         const lat=parseFloat(r.latitude), lon=parseFloat(r.longitude);
         if(isNaN(lat)||isNaN(lon)||!_coordValida(lat,lon)) return;
         _pinCount++;
@@ -455,16 +449,6 @@ function camadaAgentes(rows) {
         marker.addTo(layer);
     });
     return layer;
-}
-
-function setModoEscolas() {
-    _modoEscolas = true;
-    _modo = 'alunos';
-    ['al','ag','amb'].forEach(id => document.getElementById('btn-'+id)?.classList.remove('on'));
-    document.getElementById('btn-escolas')?.classList.add('on');
-    _reaplicarCamadas();
-    if (_camAg) map.removeLayer(_camAg);
-    atualizarLegenda();
 }
 
 function camadaEscolas(rows) {
@@ -725,7 +709,7 @@ function _iniciarBairros() {
     BAIRROS_ITAMARACA.forEach(b => {
         const poly = L.polygon(b.poligono, {
             color: b.cor, weight: 1.5,
-            fillColor: b.cor, fillOpacity: 0.15,
+            fillColor: '#000000', fillOpacity: 0,
             className: 'bairro-poly'
         });
         poly.bindTooltip(b.nome, {permanent: false, direction: 'center', className: 'tooltip-bairro'});
@@ -736,8 +720,8 @@ function _iniciarBairros() {
             _reaplicarCamadas();
             if (!_menuAberto) toggleMenu();
         });
-        poly.on('mouseover', function() { this.setStyle({fillOpacity: 0.30}); });
-        poly.on('mouseout',  function() { this.setStyle({fillOpacity: 0.15}); });
+        poly.on('mouseover', function() { this.setStyle({weight: 3, color: '#000'}); });
+        poly.on('mouseout',  function() { this.setStyle({weight: 2, color: '#111111'}); });
         poly.addTo(_camadaBairros);
     });
     _camadaBairros.addTo(map);
