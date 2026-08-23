@@ -477,111 +477,50 @@ function camadaAgentes(rows) {
 }
 
 function camadaEscolas(rows) {
-    // Mesma lógica dos agentes: vermelho=novo_ponto, amarelo=recorrencia, verde=limpo
     const layer = L.layerGroup();
     const _cores  = {'novo_ponto':'#e53e3e','recorrencia':'#d69e2e','limpo':'#38a169','analise_operador':'#d69e2e'};
     const _labels = {'novo_ponto':'Ponto sem registro','recorrencia':'Recorrência','limpo':'Local limpo','analise_operador':'Recorrência'};
     const _tipos  = {'lixo':'Lixo','poda':'Poda','lixo_poda':'Lixo+poda'};
-
-    const grupos = {};
-    rows.forEach(r => {
-        const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
-        if (isNaN(lat) || isNaN(lon)) return;
-        const chave = _chaveHistorico(r, lat, lon);
-        if (!grupos[chave]) grupos[chave] = [];
-        grupos[chave].push({ r, lat, lon });
-    });
-    Object.keys(grupos).forEach(k => {
-        grupos[k].sort((a,b) => ((a.r.data||'')+(a.r.hora||'')).localeCompare((b.r.data||'')+(b.r.hora||'')));
-    });
 
     rows.forEach(r => {
         const lat = parseFloat(r.latitude), lon = parseFloat(r.longitude);
         if (isNaN(lat) || isNaN(lon) || !_coordValida(lat, lon)) return;
         const st  = r.status || 'novo_ponto';
         const cor = _cores[st] || '#718096';
-        const chave = _chaveHistorico(r, lat, lon);
-        const membros = grupos[chave] || [{ r, lat, lon }];
+        const urls = r._foto_urls || [];
 
-        const slides = [];
-        const refsFeitos = {};
-        membros.forEach(m => {
-            const rr = m.r;
-            if (rr.ref_grupo && rr.ref_foto) {
-                const rk = String(rr.ref_grupo).trim() + '_' + _normFotoNome(rr.ref_foto);
-                if (!refsFeitos[rk]) {
-                    refsFeitos[rk] = true;
-                    const urlsAluno = _urlsAlunoRef(rr.ref_grupo, rr.ref_foto);
-                    slides.push({ tipo:'aluno', grupo:rr.ref_grupo, foto:rr.ref_foto,
-                        lat:m.lat, lon:m.lon, data:rr.data, hora:rr.hora,
-                        urls:urlsAluno, status:rr.status, tipo_residuo:rr.tipo_residuo });
-                }
-            }
-        });
-        membros.forEach(m => {
-            const rr = m.r;
-            slides.push({ tipo:'escola', grupo:rr.grupo, foto:rr.foto,
-                data:rr.data, hora:rr.hora, status:rr.status,
-                tipo_residuo:rr.tipo_residuo, lat:m.lat, lon:m.lon,
-                urls:rr._foto_urls || [] });
-        });
-        window._histSlides[chave+'_esc'] = slides;
-        const temHist = slides.length > 1;
-        let idxAtual = slides.findIndex(s => s.tipo==='escola' && s.foto===r.foto);
-        if (idxAtual < 0) idxAtual = slides.length - 1;
-        const sid = _safeId(chave + '_esc');
+        const fotoHtml = urls.length
+            ? criarImgComFallback(urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;')
+            : '<div style="background:#f7fafc;padding:14px;text-align:center;font-size:11px;color:#a0aec0;">Sem foto</div>';
 
-        let popup;
-        if (temHist) {
-            popup = '<div style="min-width:260px;max-width:300px;">'
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:8px 12px;border-radius:4px 4px 0 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;">'
-                +'<span>&#127979; '+(_labels[st]||st)+' <span style="opacity:.85;font-weight:600;font-size:11px;">('+slides.length+' fotos)</span></span>'
-                +'<span style="display:flex;align-items:center;gap:5px;">'
-                +'<button type="button" id="hp-'+sid+'-p" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1;">&#9664;</button>'
-                +'<span id="hist-ind-'+sid+'" style="font-size:11px;min-width:36px;text-align:center;">'+(idxAtual+1)+'/'+slides.length+'</span>'
-                +'<button type="button" id="hp-'+sid+'-n" style="background:rgba(255,255,255,0.25);border:none;color:#fff;border-radius:4px;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1;">&#9654;</button>'
-                +'</span></div>'
-                +'<div class="hist-foto-wrap" id="hist-foto-'+sid+'" style="padding:8px 8px 0;">'+_thumbHtml(r._foto_urls, cor)+'</div>'
-                +'<div id="hist-meta-'+sid+'" style="padding:6px 12px;font-size:11px;color:#718096;border-bottom:1px solid #edf2f7;">'
-                +'<b style="color:#2d3748;">'+r.foto+'</b>'
-                +' &nbsp;|&nbsp; '+(r.data||'--')+' '+(r.hora||'')
-                +'<br>Gr '+r.grupo+' &nbsp;|&nbsp; Tipo: '+(_tipos[r.tipo_residuo]||'--')
-                +'</div>'
-                +'<div id="hist-slide-'+sid+'" style="padding:8px 10px;"></div>'
-                +'</div>';
-        } else {
-            popup = '<div style="min-width:220px;">'
-                +_thumbHtml(r._foto_urls, cor)
-                +'<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#127979; Escola — '+(_labels[st]||st)+'</div>'
-                +'<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
-                +'<b>Grupo:</b> '+r.grupo+'<br>'
-                +'<b>Foto:</b> '+(r.foto||'--')+'<br>'
-                +'<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
-                +'<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
-                +'<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
-                +'</div></div>';
-        }
+        const popup = '<div style="min-width:220px;">'
+            + fotoHtml
+            + '<div style="background:'+cor+';color:#fff;font-weight:700;padding:6px 12px;font-size:12px;">&#127979; Escola — '+(_labels[st]||st)+'</div>'
+            + '<div style="padding:8px 12px;font-size:12px;line-height:1.9;color:#2d3748;">'
+            + '<b>Grupo:</b> '+(r.grupo||'--')+'<br>'
+            + '<b>Foto:</b> '+(r.foto||'--')+'<br>'
+            + '<b>Tipo:</b> '+(_tipos[r.tipo_residuo]||'--')+'<br>'
+            + '<b>Data:</b> '+(r.data||'--')+' '+(r.hora||'')+'<br>'
+            + '<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
+            + '</div></div>';
 
-        const bairroEsc = _bairroDoPin(lat, lon);
-        const corBairroEsc = bairroEsc ? bairroEsc.cor : null;
-        const marker = _trackMarker(L.marker([lat,lon],{icon:iconeComBairro(cor,tipoAg(st,r.tipo_residuo),corBairroEsc)}), cor, tipoAg(st,r.tipo_residuo));
-        marker.bindPopup(popup,{maxWidth:310});
-        if (temHist) {
-            marker.on('popupopen', function() {
-                setTimeout(function() {
-                    window._histSlides[chave+'_esc'] = slides;
-                    _histIdx[chave+'_esc'] = Math.min(Math.max(0,idxAtual), slides.length-1);
-                    _renderHistSlide(chave+'_esc');
-                    _bindHistNav(chave+'_esc');
-                }, 50);
-            });
-        } else {
+        const corBairro = _bairroDoPin ? (_bairroDoPin(lat, lon) || {}).cor || null : null;
+        const marker = L.marker([lat, lon], {icon: iconeComBairro(cor, r.tipo_residuo || 'lixo', corBairro)});
+        marker.bindPopup(popup, {maxWidth: 280});
+
+        if (urls.length) {
             marker.on('popupopen', function() {
                 setTimeout(function() {
                     const root = document.querySelector('.leaflet-popup-content');
                     if (!root) return;
-                    const gal = [{urls:r._foto_urls||[], caption:(r.foto||'')+(r.data?' · '+r.data:''), cor}];
-                    _bindFotoZoom(root, gal, 0, cor);
+                    const img = root.querySelector('img');
+                    if (img) {
+                        img.style.cursor = 'zoom-in';
+                        img.onclick = function(e) {
+                            e.stopPropagation();
+                            _abrirGaleria([{urls: urls, caption: (r.foto||'')+(r.data?' · '+r.data:''), cor}], 0, cor);
+                        };
+                    }
                 }, 40);
             });
         }
@@ -589,6 +528,7 @@ function camadaEscolas(rows) {
     });
     return layer;
 }
+
 
 function setModo(modo){
     _modo=modo;
@@ -629,6 +569,63 @@ function atualizarLegenda(){
             +'<div><span style="color:#38a169;">&#9679;</span> Local limpo (&#10003;)</div>';
     }
     el.innerHTML=h;
+}
+
+// ── Lightbox ────────────────────────────────────────────────────
+let _lbSlides = [], _lbIdx = 0;
+function _ensureLightbox() {
+    let ov = document.getElementById('mv-lightbox');
+    if (ov) return ov;
+    ov = document.createElement('div'); ov.id = 'mv-lightbox';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:99999;display:none;align-items:center;justify-content:center;flex-direction:column;';
+    ov.innerHTML = '<button id="mv-lb-close" style="position:absolute;top:14px;right:14px;width:40px;height:40px;border:none;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;">&#10005;</button>'
+        +'<button id="mv-lb-prev" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;display:none;">&#9664;</button>'
+        +'<div style="max-width:94vw;max-height:86vh;display:flex;align-items:center;justify-content:center;border-radius:12px;padding:6px;background:#222;">'
+        +'<img id="mv-lb-img" style="max-width:90vw;max-height:82vh;object-fit:contain;border-radius:8px;display:block;background:#000;" alt="foto">'
+        +'</div>'
+        +'<button id="mv-lb-next" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;display:none;">&#9654;</button>'
+        +'<div id="mv-lb-caption" style="color:#e2e8f0;font-size:13px;margin-top:12px;text-align:center;max-width:90vw;"></div>'
+        +'<div id="mv-lb-ind" style="color:#a0aec0;font-size:12px;margin-top:4px;"></div>';
+    document.body.appendChild(ov);
+    document.getElementById('mv-lb-close').onclick = () => ov.style.display = 'none';
+    document.getElementById('mv-lb-prev').onclick  = () => { _lbIdx = (_lbIdx-1+_lbSlides.length)%_lbSlides.length; _lbRender(); };
+    document.getElementById('mv-lb-next').onclick  = () => { _lbIdx = (_lbIdx+1)%_lbSlides.length; _lbRender(); };
+    ov.addEventListener('click', e => { if (e.target===ov) ov.style.display='none'; });
+    document.addEventListener('keydown', e => {
+        if (ov.style.display!=='flex') return;
+        if (e.key==='Escape') ov.style.display='none';
+        if (e.key==='ArrowLeft')  { _lbIdx=(_lbIdx-1+_lbSlides.length)%_lbSlides.length; _lbRender(); }
+        if (e.key==='ArrowRight') { _lbIdx=(_lbIdx+1)%_lbSlides.length; _lbRender(); }
+    });
+    return ov;
+}
+function _lbRender() {
+    const ov = _ensureLightbox();
+    const s = _lbSlides[_lbIdx]; if (!s) return;
+    const img = document.getElementById('mv-lb-img');
+    img._n = 0; img.src = s.urls[0];
+    img.onerror = () => { img._n=(img._n||0)+1; if(img._n<s.urls.length) img.src=s.urls[img._n]; };
+    document.getElementById('mv-lb-caption').textContent = s.caption||'';
+    const multi = _lbSlides.length>1;
+    document.getElementById('mv-lb-ind').textContent = multi ? (_lbIdx+1)+'/'+_lbSlides.length : '';
+    document.getElementById('mv-lb-prev').style.display = multi?'flex':'none';
+    document.getElementById('mv-lb-next').style.display = multi?'flex':'none';
+    ov.style.display = 'flex';
+}
+function _abrirGaleria(slides, idx, cor) {
+    _lbSlides = (slides||[]).filter(s=>s.urls&&s.urls.length);
+    if (!_lbSlides.length) return;
+    _lbIdx = Math.min(idx||0, _lbSlides.length-1);
+    _lbRender();
+}
+function _bindFotoZoom(container, slides, startIdx, cor) {
+    const img = container.querySelector('img');
+    if (!img) return;
+    img.style.cursor = 'zoom-in';
+    img.onclick = function(e) {
+        e.stopPropagation();
+        _abrirGaleria(slides, startIdx||0, cor);
+    };
 }
 
 async function init(){
