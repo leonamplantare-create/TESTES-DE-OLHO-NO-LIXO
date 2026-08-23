@@ -254,6 +254,20 @@ function criarImgComFallback(urls, style) {
     return '<img id="'+id+'" src="'+urls[0]+'" style="'+style+'" onerror="window._imgErr(this)">';
 }
 
+let _allMarkers = [];
+let _ultimaEscala = null;
+
+function _trackMarker(marker, cor, tipo) {
+    _allMarkers.push({ marker, cor, tipo });
+    return marker;
+}
+
+function tipoAg(status, tipo_residuo) {
+    if (status === 'limpo') return 'limpo';
+    if (status === 'analise_operador') return 'analise';
+    return tipo_residuo || 'lixo';
+}
+
 function _thumbHtml(urls, cor, styleExtra) {
     cor = cor || '#718096';
     styleExtra = styleExtra || '';
