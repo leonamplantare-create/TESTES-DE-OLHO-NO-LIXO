@@ -254,6 +254,17 @@ function criarImgComFallback(urls, style) {
     return '<img id="'+id+'" src="'+urls[0]+'" style="'+style+'" onerror="window._imgErr(this)">';
 }
 
+function _thumbHtml(urls, cor, styleExtra) {
+    cor = cor || '#718096';
+    styleExtra = styleExtra || '';
+    if (!urls || !urls.length) {
+        return '<div class="mv-foto-card" style="border-color:'+cor+';'+styleExtra+'"><div class="mv-foto-empty">Sem foto</div></div>';
+    }
+    return '<div class="mv-foto-card mv-foto-open" style="border-color:'+cor+';'+styleExtra+'" data-mv-cor="'+cor+'">'
+        + criarImgComFallback(urls, 'width:100%;max-height:160px;object-fit:contain;background:#000;display:block;cursor:zoom-in;')
+        + '</div>';
+}
+
 function _imgErr(el) {
     if (el._idx === undefined) el._idx = 0;
     el._idx++;
