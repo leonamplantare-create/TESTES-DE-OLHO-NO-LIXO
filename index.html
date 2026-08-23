@@ -453,9 +453,7 @@ function camadaAgentes(rows) {
                 +'</div></div>';
         }
 
-        const bairroAg = _bairroDoPin(lat, lon);
-        const corBairroAg = bairroAg ? bairroAg.cor : null;
-        const marker = L.marker([lat,lon],{icon:iconeComBairro(cor,tipoAg(st,r.tipo_residuo),corBairroAg)});
+        const marker = L.marker([lat,lon],{icon:icone(cor,tipoAg(st,r.tipo_residuo))});
         marker.bindPopup(popup,{maxWidth:310});
         if (temHist) {
             marker.on('popupopen', () => {
@@ -504,8 +502,7 @@ function camadaEscolas(rows) {
             + '<b>Coord.:</b> '+lat.toFixed(6)+', '+lon.toFixed(6)
             + '</div></div>';
 
-        const corBairro = _bairroDoPin ? (_bairroDoPin(lat, lon) || {}).cor || null : null;
-        const marker = L.marker([lat, lon], {icon: iconeComBairro(cor, r.tipo_residuo || 'lixo', corBairro)});
+        const marker = L.marker([lat, lon], {icon: icone(cor, r.tipo_residuo || 'lixo')});
         marker.bindPopup(popup, {maxWidth: 280});
 
         if (urls.length) {
@@ -731,7 +728,7 @@ function _iniciarBairros() {
     BAIRROS_ITAMARACA.forEach(b => {
         const poly = L.polygon(b.poligono, {
             color: b.cor, weight: 1.5,
-            fillColor: '#000000', fillOpacity: 0,
+            fillColor: '#000000', fillOpacity: 0, color: '#111111',
             className: 'bairro-poly'
         });
         poly.bindTooltip(b.nome, {permanent: false, direction: 'center', className: 'tooltip-bairro'});
